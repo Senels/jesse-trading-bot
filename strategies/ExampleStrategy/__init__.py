@@ -26,40 +26,40 @@ class ExampleStrategy(Strategy):
 
     def should_long(self) -> bool:
         # Long when the fast SMA is above the slow SMA (uptrend)
-        return ta.sma(self.candles, self.fast_period)[-1] > ta.sma(self.candles, self.slow_period)[-1]
+        return ta.sma(self.candles, self.fast_period) > ta.sma(self.candles, self.slow_period)
 
     def should_short(self) -> bool:
         # Short when the fast SMA is below the slow SMA (downtrend)
-        return ta.sma(self.candles, self.fast_period)[-1] < ta.sma(self.candles, self.slow_period)[-1]
+        return ta.sma(self.candles, self.fast_period) < ta.sma(self.candles, self.slow_period)
 
     def should_cancel_entry(self) -> bool:
         # Cancel the pending entry if the trend flipped back
         return self.fast_period > self.slow_period and \
-               ta.sma(self.candles, self.fast_period)[-1] == ta.sma(self.candles, self.slow_period)[-1]
+               ta.sma(self.candles, self.fast_period) == ta.sma(self.candles, self.slow_period)
 
     def go_long(self):
         # Enter with a market order sized by risk per trade
         entry = self.price
         stop = entry * 0.98
         qty = utils.risk_to_qty(self.balance, self.risk_per_trade / 100, entry, stop)
-        self.buy = qty
-        self.stop_loss = stop
-        self.take_profit = entry * 1.04
+        self.buy = (qty, entry)
+        self.stop_loss = (qty, stop)
+        self.take_profit = (qty, entry * 1.04)
 
     def go_short(self):
         entry = self.price
         stop = entry * 1.02
         qty = utils.risk_to_qty(self.balance, self.risk_per_trade / 100, entry, stop)
-        self.sell = qty
-        self.stop_loss = stop
-        self.take_profit = entry * 0.96
+        self.sell = (qty, entry)
+        self.stop_loss = (qty, stop)
+        self.take_profit = (qty, entry * 0.96)
 
     def update_position(self):
         # Trailing stop: lock in 50% of profit once the price moves 2% in our favor
-        if self.is_long and self.position.pnl_percent > 2:
-            self.stop_loss = max(self.stop_loss, self.price * 0.99)
-        if self.is_short and self.position.pnl_percent > 2:
-            self.stop_loss = min(self.stop_loss, self.price * 1.01)
+        if self.is_long and self.position.pnl_percentage > 2:
+            self.stop_loss = (self.position.qty, max(self.stop_loss[0][1], self.price * 0.99))
+        if self.is_short and self.position.pnl_percentage > 2:
+            self.stop_loss = (self.position.qty, min(self.stop_loss[0][1], self.price * 1.01))
 
     def on_open_position(self, order):
         pass

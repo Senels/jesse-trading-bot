@@ -50,4 +50,4 @@ jobs:
         run: python -c "import jesse; from strategies.ExampleStrategy import ExampleStrategy; print('ExampleStrategy OK')"
 
       - name: Run smoke backtest
-        run: python backtest_example.py
+        run: python smoke_test.py

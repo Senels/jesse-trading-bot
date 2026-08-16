@@ -24,14 +24,15 @@ def to_ts(date_str: str) -> int:
 
 def main():
     # Candle data config
-    exchange = 'Binance'
+    exchange = 'Binance Perpetual Futures'
     symbol = 'BTC-USDT'
     route_timeframe = '1h'
-    start_date = '2024-01-01'
-    finish_date = '2024-03-01'
+    start_date = '2026-08-01'
+    finish_date = '2026-08-15'
 
-    # Always fetch 1m candles; the route timeframe is resampled internally
-    trading_candles, warmup_candles = get_candles(
+    # Always fetch 1m candles; the route timeframe is resampled internally.
+    # NOTE: get_candles() returns (warmup_candles, trading_candles) in that order.
+    warmup_candles, trading_candles = get_candles(
         exchange,
         symbol,
         '1m',
@@ -92,7 +93,7 @@ def main():
     print(f"Period        : {start_date} -> {finish_date}")
     print(f"Total trades  : {metrics['total']}")
     print(f"Win rate      : {metrics['win_rate']:.2f}%")
-    print(f"Total return  : {metrics['total']:.2f}%")
+    print(f"Total return  : {metrics['net_profit_percentage']:.2f}%")
     print(f"Sharpe ratio  : {metrics['sharpe_ratio']:.2f}")
     print(f"Max drawdown  : {metrics['max_drawdown']:.2f}%")
 
