@@ -12,10 +12,6 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - uses: actions/setup-python@v5
-        with:
-          python-version: '3.11'
-
       - name: Start PostgreSQL & Redis containers
         run: |
           docker run -d --name postgres -e POSTGRES_USER=jesse_user -e POSTGRES_PASSWORD=password -e POSTGRES_DB=jesse_db -p 5432:5432 postgres:14-alpine
