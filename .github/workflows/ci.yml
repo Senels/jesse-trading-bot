@@ -45,8 +45,8 @@ jobs:
       - name: Configure .env
         run: |
           cp .env.example .env
-          (Get-Content .env) -replace 'POSTGRES_HOST=localhost', 'POSTGRES_HOST=localhost' | Set-Content .env
-          (Get-Content .env) -replace 'REDIS_HOST=localhost', 'REDIS_HOST=localhost' | Set-Content .env
+          (Get-Content .env) -replace 'POSTGRES_HOST=postgres', 'POSTGRES_HOST=localhost' | Set-Content .env
+          (Get-Content .env) -replace 'REDIS_HOST=redis', 'REDIS_HOST=localhost' | Set-Content .env
 
       - name: Verify strategies import
         run: python -c "import jesse; from strategies.ExampleStrategy import ExampleStrategy; print('ExampleStrategy OK')"
