@@ -8,31 +8,35 @@ on:
 
 jobs:
   test-strategy:
-    runs-on: [self-hosted, docker]
-    services:
-      postgres:
-        image: postgres:14-alpine
-        env:
-          POSTGRES_USER: jesse_user
-          POSTGRES_PASSWORD: password
-          POSTGRES_DB: jesse_db
-        ports: ["5432:5432"]
-        options: >-
-          --health-cmd="pg_isready -U jesse_user"
-          --health-interval=10s
-          --health-timeout=5s
-          --health-retries=5
-      redis:
-        image: redis:6-alpine
-        ports: ["6379:6379"]
-        options: --health-cmd="redis-cli ping" --health-interval=10s --health-timeout=5s --health-retries=5
-
+    runs-on: [self-hosted, windows, x64, docker]
     steps:
       - uses: actions/checkout@v4
 
       - uses: actions/setup-python@v5
         with:
           python-version: '3.11'
+
+      - name: Start PostgreSQL & Redis containers
+        run: |
+          docker run -d --name postgres -e POSTGRES_USER=jesse_user -e POSTGRES_PASSWORD=password -e POSTGRES_DB=jesse_db -p 5432:5432 postgres:14-alpine
+          docker run -d --name redis -p 6379:6379 redis:6-alpine
+
+      - name: Wait for services
+        run: |
+          $maxAttempts = 30
+          $attempt = 0
+          while ($attempt -lt $maxAttempts) {
+            try {
+              docker exec postgres pg_isready -U jesse_user
+              docker exec redis redis-cli ping
+              Write-Host "Services ready"
+              break
+            } catch {
+              $attempt++
+              Start-Sleep 2
+            }
+          }
+          if ($attempt -eq $maxAttempts) { throw "Services failed to start" }
 
       - name: Install Jesse
         run: |
@@ -42,17 +46,16 @@ jobs:
       - name: Configure .env
         run: |
           cp .env.example .env
-          sed -i 's/POSTGRES_HOST=localhost/POSTGRES_HOST=postgres/' .env
-          sed -i 's/REDIS_HOST=localhost/REDIS_HOST=redis/' .env
-
-      - name: Wait for services
-        run: |
-          sleep 10
-          pg_isready -h postgres -U jesse_user
-          redis-cli -h redis ping
+          (Get-Content .env) -replace 'POSTGRES_HOST=localhost', 'POSTGRES_HOST=localhost' | Set-Content .env
+          (Get-Content .env) -replace 'REDIS_HOST=localhost', 'REDIS_HOST=localhost' | Set-Content .env
 
       - name: Verify strategies import
         run: python -c "import jesse; from strategies.ExampleStrategy import ExampleStrategy; print('ExampleStrategy OK')"
 
       - name: Run smoke backtest
         run: python smoke_test.py
+
+      - name: Cleanup containers
+        if: always()
+        run: |
+          docker rm -f postgres redis
