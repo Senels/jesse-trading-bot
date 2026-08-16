@@ -8,7 +8,24 @@ on:
 
 jobs:
   test-strategy:
-    runs-on: [self-hosted, linux, x64]
+    runs-on: [self-hosted, docker]
+    services:
+      postgres:
+        image: postgres:14-alpine
+        env:
+          POSTGRES_USER: jesse_user
+          POSTGRES_PASSWORD: password
+          POSTGRES_DB: jesse_db
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd="pg_isready -U jesse_user"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=5
+      redis:
+        image: redis:6-alpine
+        ports: ["6379:6379"]
+        options: --health-cmd="redis-cli ping" --health-interval=10s --health-timeout=5s --health-retries=5
 
     steps:
       - uses: actions/checkout@v4
@@ -25,6 +42,14 @@ jobs:
       - name: Configure .env
         run: |
           cp .env.example .env
+          sed -i 's/POSTGRES_HOST=localhost/POSTGRES_HOST=postgres/' .env
+          sed -i 's/REDIS_HOST=localhost/REDIS_HOST=redis/' .env
+
+      - name: Wait for services
+        run: |
+          sleep 10
+          pg_isready -h postgres -U jesse_user
+          redis-cli -h redis ping
 
       - name: Verify strategies import
         run: python -c "import jesse; from strategies.ExampleStrategy import ExampleStrategy; print('ExampleStrategy OK')"
