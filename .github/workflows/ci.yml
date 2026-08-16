@@ -34,10 +34,13 @@ jobs:
           }
           if ($attempt -eq $maxAttempts) { throw "Services failed to start" }
 
+      - name: Install pip in runner venv
+        run: python -m ensurepip --upgrade
+
       - name: Install Jesse
         run: |
           python -m pip install --upgrade pip
-          pip install jesse
+          python -m pip install jesse
 
       - name: Configure .env
         run: |
