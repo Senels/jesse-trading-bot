@@ -1,0 +1,53 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  test-strategy:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:14-alpine
+        env:
+          POSTGRES_USER: jesse_user
+          POSTGRES_PASSWORD: password
+          POSTGRES_DB: jesse_db
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U jesse_user"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+      redis:
+        image: redis:6-alpine
+        ports:
+          - 6379:6379
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install Jesse
+        run: |
+          python -m pip install --upgrade pip
+          pip install jesse
+
+      - name: Configure .env
+        run: |
+          cp .env.example .env
+          sed -i 's/^POSTGRES_HOST=.*/POSTGRES_HOST=localhost/' .env
+          sed -i 's/^REDIS_HOST=.*/REDIS_HOST=localhost/' .env
+
+      - name: Verify strategies import
+        run: python -c "import jesse; from strategies.ExampleStrategy import ExampleStrategy; print('ExampleStrategy OK')"
+
+      - name: Run smoke backtest
+        run: python backtest_example.py
